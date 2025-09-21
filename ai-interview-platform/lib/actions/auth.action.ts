@@ -131,6 +131,7 @@ export async function isAuthenticated() {
   return !!user;
 }
 
+
 export async function getInterviewByUserId(userId:string):Promise<Interview[]|null>{
   const interviews=await db
   .collection('interviews')
