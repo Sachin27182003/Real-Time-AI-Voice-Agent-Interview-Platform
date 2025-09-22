@@ -1,6 +1,6 @@
 "use server";
 
-import { auth, db } from "../../firebase/admin";
+import { auth, db } from "@/firebase/admin";
 import { cookies } from "next/headers";
 
 // Session duration (1 week)
@@ -49,15 +49,18 @@ export async function signUp(params: SignUpParams) {
       success: true,
       message: "Account created successfully. Please sign in.",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating user:", error);
 
-    // Handle Firebase specific errors
-    if (error.code === "auth/email-already-exists") {
-      return {
-        success: false,
-        message: "This email is already in use",
-      };
+    // Narrow error to check for Firebase error code
+    if (typeof error === "object" && error !== null && "code" in error) {
+      const e = error as { code: string };
+      if (e.code === "auth/email-already-exists") {
+        return {
+          success: false,
+          message: "This email is already in use",
+        };
+      }
     }
 
     return {
@@ -79,8 +82,8 @@ export async function signIn(params: SignInParams) {
       };
 
     await setSessionCookie(idToken);
-  } catch (error: any) {
-    console.log("");
+  } catch (error: unknown) {
+    console.log(error); // optionally log the error
 
     return {
       success: false,
@@ -131,35 +134,36 @@ export async function isAuthenticated() {
   return !!user;
 }
 
+export async function getInterviewByUserId(
+  userId: string
+): Promise<Interview[] | null> {
+  const interviews = await db
+    .collection("interviews")
+    .where("userId", "==", userId)
+    .orderBy("createdAt", "desc")
+    .get();
 
-export async function getInterviewByUserId(userId:string):Promise<Interview[]|null>{
-  const interviews=await db
-  .collection('interviews')
-  .where('userId','==',userId)
-  .orderBy('createdAt','desc')
-  .get();
-
-  return interviews.docs.map((doc)=>({
-    id:doc.id,
-    ...doc.data()
+  return interviews.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
   })) as Interview[];
 }
 
-export async function getLatestInterviews(params:GetLatestInterviewsParams):Promise<Interview[]|null>{
-  const{userId,limit=20}=params;
+export async function getLatestInterviews(
+  params: GetLatestInterviewsParams
+): Promise<Interview[] | null> {
+  const { userId, limit = 20 } = params;
 
+  const interviews = await db
+    .collection("interviews")
+    .where("createdAtId", "==", userId)
+    .where("finalized", "==", true)
+    .where("userId", "!=", userId)
+    .limit(limit)
+    .get();
 
-  const interviews=await db
-  .collection('interviews')
-  .where('createdAtId','==',userId)
-  .where('finalized','==',true)
-  .where('userId','!=',userId)
-  .limit(limit)
-  .get();
-
-  return interviews.docs.map((doc)=>({
-    id:doc.id,
-    ...doc.data()
+  return interviews.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
   })) as Interview[];
 }
-

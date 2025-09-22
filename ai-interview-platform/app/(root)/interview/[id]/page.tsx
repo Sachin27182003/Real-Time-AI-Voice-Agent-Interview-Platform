@@ -16,12 +16,14 @@ const InterviewDetails = async ({ params }: RouteParams) => {
 
   const user = await getCurrentUser();
 
+  // Redirect if user or interview is not available
+  if (!user) redirect("/login"); // or wherever you want
   const interview = await getInterviewById(id);
   if (!interview) redirect("/");
 
   const feedback = await getFeedbackByInterviewId({
     interviewId: id,
-    userId: user?.id!,
+    userId: user.id, // safe now because we checked user
   });
 
   return (
@@ -48,8 +50,8 @@ const InterviewDetails = async ({ params }: RouteParams) => {
       </div>
 
       <Agent
-        userName={user?.name!}
-        userId={user?.id}
+        userName={user.name} // safe
+        userId={user.id} // safe
         interviewId={id}
         type="interview"
         questions={interview.questions}
